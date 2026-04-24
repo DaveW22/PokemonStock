@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.08), transparent 20%),
+    linear-gradient(180deg, #070714 0%, #090816 48%, #05050d 100%);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: transparent;
+  color: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+select {
+  appearance: none;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
+  color: white;
+}
+
+@layer utilities {
+  .dashboard-shell {
+    background:
+      radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.12), transparent 18%),
+      radial-gradient(circle at 85% 20%, rgba(79, 70, 229, 0.1), transparent 22%),
+      linear-gradient(180deg, rgba(15, 14, 39, 0.92), rgba(5, 5, 13, 0.96));
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "smyths-checker",
+  "version": "1.0.0",
+  "description": "Automated stock checker for Smyths Toys product pages",
+  "main": "checker.js",
+  "scripts": {
+    "start": "node checker.js",
+    "install-browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "node-notifier": "^10.0.1",
+    "playwright": "^1.44.0"
+  }
+}
