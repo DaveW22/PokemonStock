@@ -11,6 +11,7 @@ import { useProductStatuses } from './hooks/useProductStatuses'
 import {
   createLocalDeviceId,
   disableWebPush,
+  getWebPushReadinessMessage,
   getExistingSubscription,
   supportsWebPush,
   upsertWebPushSubscription,
@@ -118,6 +119,12 @@ export default function App() {
       : 'Supabase is ready. Add env vars to switch from fallback data to live data.'
 
   useEffect(() => {
+    const readinessMessage = getWebPushReadinessMessage()
+    if (readinessMessage) {
+      setWebPushMessage(readinessMessage)
+      return
+    }
+
     if (!webPushSupported) {
       setWebPushMessage('This browser does not support web push notifications.')
       return
@@ -132,6 +139,12 @@ export default function App() {
   }, [webPushSupported])
 
   async function toggleWebPush() {
+    const readinessMessage = getWebPushReadinessMessage()
+    if (readinessMessage) {
+      setWebPushMessage(readinessMessage)
+      return
+    }
+
     if (!webPushSupported || !hasSupabaseConfig || !supabase) {
       setWebPushMessage('Push alerts require browser support and Supabase environment variables.')
       return

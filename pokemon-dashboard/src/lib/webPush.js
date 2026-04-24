@@ -36,6 +36,30 @@ export function supportsWebPush() {
   )
 }
 
+export function isStandaloneWebApp() {
+  if (typeof window === 'undefined') return false
+
+  return (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  )
+}
+
+export function getWebPushReadinessMessage() {
+  if (typeof window === 'undefined') return 'Push alerts require a browser context.'
+
+  if (!window.isSecureContext) {
+    return 'Push alerts require HTTPS.'
+  }
+
+  const isAppleMobile = /iPhone|iPad|iPod/i.test(window.navigator.userAgent)
+  if (isAppleMobile && !isStandaloneWebApp()) {
+    return 'On iPhone/iPad, add this site to your Home Screen and open it from the app icon to enable push alerts.'
+  }
+
+  return ''
+}
+
 export function createLocalDeviceId() {
   const existing = window.localStorage.getItem(DEVICE_ID_STORAGE_KEY)
   if (existing) return existing
