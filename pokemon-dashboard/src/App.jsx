@@ -7,16 +7,62 @@ import RightPanel from './components/RightPanel'
 import StatCard from './components/StatCard'
 import Watchlist from './components/Watchlist'
 import { products as initialProducts } from './data/products'
+import { useProductStatuses } from './hooks/useProductStatuses'
+
+const intervalMinutesMap = {
+  'Every 3 minutes': 3,
+  'Every 5 minutes': 5,
+  'Every 10 minutes': 10,
+}
+
+function formatClock(value) {
+  if (!value) return 'Pending'
+
+  return new Date(value).toLocaleTimeString('en-GB', {
+    hour12: false,
+  })
+}
 
 export default function App() {
-  const [products, setProducts] = useState(initialProducts)
+  const {
+    products: liveProducts,
+    loading,
+    error,
+    refresh,
+    runManualCheck: invokeManualCheck,
+  } = useProductStatuses()
+  const [favourites, setFavourites] = useState({})
   const [checkInterval, setCheckInterval] = useState('Every 3 minutes')
-  const [lastCheck, setLastCheck] = useState('09:42:15')
-  const [nextCheck, setNextCheck] = useState('09:45:00')
+  const products = useMemo(() => {
+    const sourceProducts = liveProducts.length > 0 ? liveProducts : initialProducts
 
-  function runManualCheck() {
-    console.log('[Pokemon Stock Watcher] runManualCheck() placeholder invoked')
-    setLastCheck(new Date().toLocaleTimeString('en-GB', { hour12: false }))
+    return sourceProducts.map((product) => ({
+      ...product,
+      favourite: favourites[product.id] ?? product.favourite ?? false,
+    }))
+  }, [favourites, liveProducts])
+
+  const latestCheckedAt = useMemo(() => {
+    const timestamps = products
+      .map((product) => product.lastCheckedAt)
+      .filter(Boolean)
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+
+    if (timestamps.length === 0) return null
+
+    return timestamps.reduce((latest, current) => (current > latest ? current : latest))
+  }, [products])
+
+  const lastCheck = latestCheckedAt ? formatClock(latestCheckedAt) : 'Not yet'
+  const nextCheck = latestCheckedAt
+    ? formatClock(new Date(latestCheckedAt.getTime() + intervalMinutesMap[checkInterval] * 60_000))
+    : 'Pending'
+
+  async function runManualCheck() {
+    console.log('[Pokemon Stock Watcher] runManualCheck() invoked')
+    await invokeManualCheck()
+    await refresh()
   }
 
   function openProductPage(product) {
@@ -28,11 +74,10 @@ export default function App() {
 
   function toggleFavourite(product) {
     console.log('[Pokemon Stock Watcher] toggleFavourite()', product)
-    setProducts((current) =>
-      current.map((item) =>
-        item.id === product.id ? { ...item, favourite: !item.favourite } : item,
-      ),
-    )
+    setFavourites((current) => ({
+      ...current,
+      [product.id]: !(current[product.id] ?? product.favourite ?? false),
+    }))
   }
 
   function updateCheckInterval(value) {
@@ -53,6 +98,12 @@ export default function App() {
       available: products.filter((product) => product.status === 'potential').length,
     }
   }, [products])
+
+  const statusNote = error
+    ? error
+    : liveProducts.length > 0
+      ? 'Reading live products and latest statuses from Supabase.'
+      : 'Supabase is ready. Add env vars to switch from fallback data to live data.'
 
   return (
     <div className="min-h-screen bg-transparent p-4 text-white lg:p-6">
@@ -96,17 +147,19 @@ export default function App() {
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/12 text-emerald-300">
-                  <Activity className="h-5 w-5 animate-pulse" />
+                  <Activity className={loading ? 'h-5 w-5 animate-pulse' : 'h-5 w-5'} />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Watching for stock</p>
-                  <p className="text-sm text-emerald-200/80">Running continuously</p>
+                  <p className="text-sm text-emerald-200/80">
+                    {loading ? 'Refreshing status from Supabase' : 'Running continuously'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-sm text-emerald-200/80">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 <PackageSearch className="h-4 w-4" />
-                <span>Local dashboard mode active</span>
+                <span>{liveProducts.length > 0 ? 'Supabase live mode active' : 'Local fallback mode active'}</span>
               </div>
             </motion.div>
           </main>
@@ -117,6 +170,7 @@ export default function App() {
               onRunManualCheck={runManualCheck}
               onUpdateCheckInterval={updateCheckInterval}
               summary={summary}
+              statusNote={statusNote}
             />
           </aside>
         </div>

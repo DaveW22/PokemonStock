@@ -48,7 +48,13 @@ function ToggleRow({ label, value, accent = 'default', disabled = false }) {
   )
 }
 
-export default function RightPanel({ checkInterval, onRunManualCheck, onUpdateCheckInterval, summary }) {
+export default function RightPanel({
+  checkInterval,
+  onRunManualCheck,
+  onUpdateCheckInterval,
+  summary,
+  statusNote,
+}) {
   return (
     <div className="space-y-5">
       <PanelCard icon={Bell} title="Alert & Notification">
@@ -121,7 +127,7 @@ export default function RightPanel({ checkInterval, onRunManualCheck, onUpdateCh
           </div>
           <div className="flex items-center gap-2 pt-1 text-xs text-slate-500">
             <Clock className="h-3.5 w-3.5" />
-            Dashboard uses local mock data for this prototype.
+            {statusNote}
           </div>
         </div>
       </PanelCard>
