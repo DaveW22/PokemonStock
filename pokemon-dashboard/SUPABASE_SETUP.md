@@ -47,9 +47,33 @@ supabase secrets set SUPABASE_URL="YOUR_SUPABASE_URL"
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
 supabase secrets set TELEGRAM_BOT_TOKEN="YOUR_TELEGRAM_BOT_TOKEN"
 supabase secrets set TELEGRAM_CHAT_ID="YOUR_TELEGRAM_CHAT_ID"
+supabase secrets set VAPID_SUBJECT="mailto:you@example.com"
+supabase secrets set VAPID_PUBLIC_KEY="YOUR_VAPID_PUBLIC_KEY"
+supabase secrets set VAPID_PRIVATE_KEY="YOUR_VAPID_PRIVATE_KEY"
 ```
 
 If you do not want Telegram notifications yet, omit the Telegram secrets.
+If you do not want Safari web push yet, omit the VAPID secrets.
+
+## 6.1 Generate VAPID keys for Safari web push
+
+From the `pokemon-dashboard` directory:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Copy the generated keys:
+
+- `publicKey` goes to `VAPID_PUBLIC_KEY` (Edge Function secret)
+- `privateKey` goes to `VAPID_PRIVATE_KEY` (Edge Function secret)
+- `publicKey` also goes to frontend env var `VITE_VAPID_PUBLIC_KEY`
+
+Example frontend `.env` value:
+
+```bash
+VITE_VAPID_PUBLIC_KEY="YOUR_VAPID_PUBLIC_KEY"
+```
 
 ## 7. Test the function
 
@@ -108,3 +132,6 @@ select cron.unschedule('check-stock-every-5-minutes');
 - If the frontend cannot read product or status data, check the RLS `SELECT` policies on `products` and `product_status`.
 - If products do not update, inspect the cron job, the Edge Function logs, and recent inserts in `stock_checks`.
 - If the scheduled HTTP call fails, confirm `pg_cron` and `pg_net` are enabled and the project ref / anon key are correct.
+- Safari push on iPhone requires iOS/iPadOS 16.4+, user permission, and launching from the Home Screen web app.
+- If push subscribe fails, verify `VITE_VAPID_PUBLIC_KEY` is present and matches the function secret `VAPID_PUBLIC_KEY`.
+- If stock checks run but no push is delivered, inspect `web_push_subscriptions` rows and Edge Function logs for failed endpoint delivery.

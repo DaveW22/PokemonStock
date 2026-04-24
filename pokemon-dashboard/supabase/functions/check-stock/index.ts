@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'npm:web-push@3.6.7'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,19 @@ type CheckOutcome = {
   matchedSignals: string[]
   pageExcerpt: string | null
   error: string | null
+}
+
+type WebPushSubscriptionRow = {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
+type WebPushSendError = {
+  statusCode?: number
+  body?: string
+  message?: string
 }
 
 function delay(ms: number) {
@@ -94,6 +108,16 @@ async function sendTelegramMessage(botToken: string, chatId: string, message: st
   if (!response.ok) {
     const responseText = await response.text()
     throw new Error(`Telegram send failed: ${response.status} ${responseText}`)
+  }
+}
+
+function asWebPushError(error: unknown): WebPushSendError {
+  if (error && typeof error === 'object') {
+    return error as WebPushSendError
+  }
+
+  return {
+    message: typeof error === 'string' ? error : 'Unknown web push error',
   }
 }
 
@@ -168,6 +192,9 @@ Deno.serve(async (request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const telegramBotToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
   const telegramChatId = Deno.env.get('TELEGRAM_CHAT_ID')
+  const vapidSubject = Deno.env.get('VAPID_SUBJECT')
+  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
 
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(
@@ -190,6 +217,11 @@ Deno.serve(async (request) => {
   })
 
   const checkedAt = new Date().toISOString()
+  const webPushEnabled = Boolean(vapidSubject && vapidPublicKey && vapidPrivateKey)
+
+  if (webPushEnabled) {
+    webpush.setVapidDetails(vapidSubject!, vapidPublicKey!, vapidPrivateKey!)
+  }
 
   try {
     const [{ data: products, error: productsError }, { data: currentStatuses, error: statusesError }] =
@@ -261,6 +293,74 @@ Deno.serve(async (request) => {
             sent = true
           } catch (telegramError) {
             console.error('Telegram notification failed', telegramError)
+          }
+        }
+
+        if (webPushEnabled) {
+          const { data: subscriptions, error: subscriptionsError } = await supabase
+            .from('web_push_subscriptions')
+            .select('id, endpoint, p256dh, auth')
+            .eq('is_active', true)
+
+          if (subscriptionsError) {
+            console.error('Failed to load web push subscriptions', subscriptionsError)
+          }
+
+          for (const subscription of (subscriptions ?? []) as WebPushSubscriptionRow[]) {
+            try {
+              await webpush.sendNotification(
+                {
+                  endpoint: subscription.endpoint,
+                  keys: {
+                    p256dh: subscription.p256dh,
+                    auth: subscription.auth,
+                  },
+                },
+                JSON.stringify({
+                  title: 'Pokemon Stock Alert',
+                  body: `${product.name} may be in stock at ${product.retailer}. Tap to open the product page.`,
+                  url: product.url,
+                  tag: `stock-${product.id}`,
+                }),
+              )
+
+              sent = true
+
+              const { error: successUpdateError } = await supabase
+                .from('web_push_subscriptions')
+                .update({
+                  is_active: true,
+                  last_success_at: checkedAt,
+                  last_failure_at: null,
+                  failure_reason: null,
+                })
+                .eq('id', subscription.id)
+
+              if (successUpdateError) {
+                console.error('Failed to update successful push delivery metadata', successUpdateError)
+              }
+            } catch (pushError) {
+              const normalizedError = asWebPushError(pushError)
+              const shouldDeactivate = normalizedError.statusCode === 404 || normalizedError.statusCode === 410
+
+              const { error: failureUpdateError } = await supabase
+                .from('web_push_subscriptions')
+                .update({
+                  is_active: shouldDeactivate ? false : true,
+                  last_failure_at: checkedAt,
+                  failure_reason:
+                    normalizedError.body ??
+                    normalizedError.message ??
+                    `Push failed with status code ${normalizedError.statusCode ?? 'unknown'}`,
+                })
+                .eq('id', subscription.id)
+
+              if (failureUpdateError) {
+                console.error('Failed to update failed push delivery metadata', failureUpdateError)
+              }
+
+              console.error('Web push notification failed', normalizedError)
+            }
           }
         }
 

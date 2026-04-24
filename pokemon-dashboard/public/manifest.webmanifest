@@ -1,0 +1,25 @@
+{
+  "name": "Pokemon Stock Watcher",
+  "short_name": "Stock Watcher",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090816",
+  "theme_color": "#090816",
+  "description": "Track Pokemon stock changes and receive push alerts.",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
