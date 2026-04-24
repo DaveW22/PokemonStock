@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Activity, PackageSearch } from 'lucide-react'
 import Sidebar from './components/Sidebar'
@@ -8,6 +8,14 @@ import StatCard from './components/StatCard'
 import Watchlist from './components/Watchlist'
 import { products as initialProducts } from './data/products'
 import { useProductStatuses } from './hooks/useProductStatuses'
+import {
+  createLocalDeviceId,
+  disableWebPush,
+  getExistingSubscription,
+  supportsWebPush,
+  upsertWebPushSubscription,
+} from './lib/webPush'
+import { hasSupabaseConfig, supabase } from './lib/supabase'
 
 const intervalMinutesMap = {
   'Every 3 minutes': 3,
@@ -33,6 +41,10 @@ export default function App() {
   } = useProductStatuses()
   const [favourites, setFavourites] = useState({})
   const [checkInterval, setCheckInterval] = useState('Every 3 minutes')
+  const [webPushSupported] = useState(() => supportsWebPush())
+  const [webPushEnabled, setWebPushEnabled] = useState(false)
+  const [webPushBusy, setWebPushBusy] = useState(false)
+  const [webPushMessage, setWebPushMessage] = useState('')
   const products = useMemo(() => {
     const sourceProducts = liveProducts.length > 0 ? liveProducts : initialProducts
 
@@ -105,6 +117,53 @@ export default function App() {
       ? 'Reading live products and latest statuses from Supabase.'
       : 'Supabase is ready. Add env vars to switch from fallback data to live data.'
 
+  useEffect(() => {
+    if (!webPushSupported) {
+      setWebPushMessage('This browser does not support web push notifications.')
+      return
+    }
+
+    getExistingSubscription().then((subscription) => {
+      setWebPushEnabled(Boolean(subscription))
+      if (subscription) {
+        setWebPushMessage('Push alerts are enabled for this device.')
+      }
+    })
+  }, [webPushSupported])
+
+  async function toggleWebPush() {
+    if (!webPushSupported || !hasSupabaseConfig || !supabase) {
+      setWebPushMessage('Push alerts require browser support and Supabase environment variables.')
+      return
+    }
+
+    setWebPushBusy(true)
+    setWebPushMessage('')
+
+    try {
+      const deviceId = createLocalDeviceId()
+
+      if (webPushEnabled) {
+        const disabled = await disableWebPush(supabase, deviceId)
+        if (!disabled.ok) throw disabled.error
+
+        setWebPushEnabled(false)
+        setWebPushMessage('Push alerts disabled on this device.')
+      } else {
+        const result = await upsertWebPushSubscription(supabase, deviceId)
+        if (!result.ok) throw result.error
+
+        setWebPushEnabled(true)
+        setWebPushMessage('Push alerts enabled. Add this app to your iPhone home screen for Safari web app notifications.')
+      }
+    } catch (pushError) {
+      const message = pushError instanceof Error ? pushError.message : 'Unable to update push subscription.'
+      setWebPushMessage(message)
+    } finally {
+      setWebPushBusy(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-transparent p-4 text-white lg:p-6">
       <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[36px] border border-white/8 p-4 shadow-[0_30px_80px_rgba(0,0,0,0.45)] lg:p-6">
@@ -171,6 +230,11 @@ export default function App() {
               onUpdateCheckInterval={updateCheckInterval}
               summary={summary}
               statusNote={statusNote}
+              webPushSupported={webPushSupported}
+              webPushEnabled={webPushEnabled}
+              webPushBusy={webPushBusy}
+              webPushMessage={webPushMessage}
+              onToggleWebPush={toggleWebPush}
             />
           </aside>
         </div>
