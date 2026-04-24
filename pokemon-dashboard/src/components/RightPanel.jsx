@@ -18,11 +18,17 @@ function PanelCard({ icon: Icon, title, children }) {
   )
 }
 
-function ToggleRow({ label, value, accent = 'default', disabled = false }) {
+function ToggleRow({ label, value, accent = 'default', disabled = false, note, onClick, loading = false }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || !onClick || loading}
+      className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-left"
+    >
       <div>
         <p className="text-sm font-medium text-white">{label}</p>
+        {note ? <p className="mt-1 text-xs text-slate-400">{note}</p> : null}
         {disabled ? <p className="mt-1 text-xs text-slate-500">Disabled / not recommended</p> : null}
       </div>
       <div
@@ -44,7 +50,7 @@ function ToggleRow({ label, value, accent = 'default', disabled = false }) {
           ].join(' ')}
         />
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -54,12 +60,28 @@ export default function RightPanel({
   onUpdateCheckInterval,
   summary,
   statusNote,
+  webPushSupported,
+  webPushEnabled,
+  webPushBusy,
+  webPushMessage,
+  onToggleWebPush,
 }) {
   return (
     <div className="space-y-5">
       <PanelCard icon={Bell} title="Alert & Notification">
         <div className="space-y-3">
-          <ToggleRow label="Desktop notifications" value accent="green" />
+          <ToggleRow
+            label="Safari web push alerts"
+            value={webPushEnabled}
+            accent="green"
+            disabled={!webPushSupported}
+            note={
+              webPushMessage ||
+              'Enable push alerts for stock changes. On iPhone, add this site to your home screen first.'
+            }
+            onClick={onToggleWebPush}
+            loading={webPushBusy}
+          />
           <ToggleRow label="Open browser on stock" value />
           <ToggleRow label="Auto checkout" value={false} disabled />
         </div>
