@@ -97,7 +97,14 @@ export default function Watchlist({ products, onOpen, onToggleFavourite }) {
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 md:mt-5 md:space-y-4">
+      <div
+        className={[
+          'mt-4',
+          viewMode === 'compact'
+            ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+            : 'space-y-3 md:mt-5 md:space-y-4',
+        ].join(' ')}
+      >
         {sortedProducts.map((product, index) => (
           <ProductRow
             key={product.id}

@@ -206,6 +206,18 @@ export default function App() {
         setWebPushMessage('Push alerts are enabled for this device.')
       }
     })
+
+    if (Notification.permission === 'default') {
+      Notification.requestPermission()
+        .then((permission) => {
+          if (permission === 'granted') {
+            setWebPushMessage('Notifications allowed. Turn on Safari web push alerts to subscribe this device.')
+          }
+        })
+        .catch(() => {
+          setWebPushMessage('Notification prompt could not be shown automatically. Use the toggle to enable alerts.')
+        })
+    }
   }, [webPushSupported])
 
   async function toggleWebPush() {
@@ -233,10 +245,19 @@ export default function App() {
         setWebPushEnabled(false)
         setWebPushMessage('Push alerts disabled on this device.')
       } else {
+        if (Notification.permission === 'default') {
+          const permission = await Notification.requestPermission()
+          if (permission !== 'granted') {
+            setWebPushMessage('Please allow notifications to enable push alerts.')
+            return
+          }
+        }
+
         const result = await upsertWebPushSubscription(supabase, deviceId)
         if (!result.ok) throw result.error
 
-        setWebPushEnabled(true)
+        const activeSubscription = await getExistingSubscription()
+        setWebPushEnabled(Boolean(activeSubscription))
         setWebPushMessage('Push alerts enabled. Add this app to your iPhone home screen for Safari web app notifications.')
       }
     } catch (pushError) {
@@ -265,9 +286,19 @@ export default function App() {
       <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[28px] border border-white/8 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-4 lg:rounded-[36px] lg:p-6">
         <header className="mb-4 rounded-2xl border border-white/8 bg-white/5 p-3 xl:hidden">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-base font-semibold text-white">Pokemon Stock Watcher</p>
-              <p className="text-xs text-slate-400">Last check: {lastCheck}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-rose-400 via-white to-violet-400 p-[2px] shadow-glow-violet">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-navy-900">
+                  <div className="relative h-5 w-5 rounded-full border border-white/40 bg-white/90">
+                    <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-navy-900/70" />
+                    <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-navy-900/70 bg-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-white">Pokemon Stock Watcher</p>
+                <p className="truncate text-xs text-slate-400">Last check: {lastCheck}</p>
+              </div>
             </div>
             <button
               type="button"
