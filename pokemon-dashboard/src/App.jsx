@@ -6,6 +6,7 @@ import Hero from './components/Hero'
 import RightPanel from './components/RightPanel'
 import SettingsPage from './components/SettingsPage'
 import MonitorProductsPage from './components/MonitorProductsPage'
+import AlertCenterPage from './components/AlertCenterPage'
 import StatCard from './components/StatCard'
 import Watchlist from './components/Watchlist'
 import { products as initialProducts } from './data/products'
@@ -60,6 +61,9 @@ export default function App() {
   const [webPushEnabled, setWebPushEnabled] = useState(false)
   const [webPushBusy, setWebPushBusy] = useState(false)
   const [webPushMessage, setWebPushMessage] = useState('')
+  const [alertCenterBusy, setAlertCenterBusy] = useState(false)
+  const [alertCenterStatus, setAlertCenterStatus] = useState(null)
+  const [alertCenterMessage, setAlertCenterMessage] = useState('')
 
   const products = useMemo(() => {
     const sourceProducts = liveProducts.length > 0 ? liveProducts : initialProducts
@@ -274,8 +278,67 @@ export default function App() {
     }
   }
 
+  async function refreshAlertCenter() {
+    if (!hasSupabaseConfig || !supabase) {
+      setAlertCenterMessage('Alert center requires Supabase environment variables.')
+      return
+    }
+
+    setAlertCenterBusy(true)
+    setAlertCenterMessage('')
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('alert-center', {
+        body: { action: 'status' },
+      })
+
+      if (invokeError) throw invokeError
+
+      setAlertCenterStatus(data)
+      setAlertCenterMessage('Alert center status refreshed.')
+    } catch (centerError) {
+      setAlertCenterMessage(centerError instanceof Error ? centerError.message : 'Failed to refresh alert center.')
+    } finally {
+      setAlertCenterBusy(false)
+    }
+  }
+
+  async function sendTestAlert() {
+    if (!hasSupabaseConfig || !supabase) {
+      setAlertCenterMessage('Cannot send test alert without Supabase configuration.')
+      return
+    }
+
+    setAlertCenterBusy(true)
+    setAlertCenterMessage('')
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('alert-center', {
+        body: {
+          action: 'test',
+          url: window.location.href,
+        },
+      })
+
+      if (invokeError) throw invokeError
+
+      setAlertCenterStatus(data)
+      const testMessage = data?.testResult?.message || 'Test alert completed.'
+      setAlertCenterMessage(testMessage)
+    } catch (centerError) {
+      setAlertCenterMessage(centerError instanceof Error ? centerError.message : 'Failed to send test alert.')
+    } finally {
+      setAlertCenterBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (currentPage !== 'alerts') return
+    refreshAlertCenter()
+  }, [currentPage])
+
   function renderMainContent() {
-    if (currentPage === 'settings' || currentPage === 'alerts') {
+    if (currentPage === 'settings') {
       return (
         <SettingsPage
           checkInterval={checkInterval}
@@ -286,6 +349,23 @@ export default function App() {
           webPushBusy={webPushBusy}
           webPushMessage={webPushMessage}
           onToggleWebPush={toggleWebPush}
+        />
+      )
+    }
+
+    if (currentPage === 'alerts') {
+      return (
+        <AlertCenterPage
+          webPushSupported={webPushSupported}
+          webPushEnabled={webPushEnabled}
+          webPushBusy={webPushBusy}
+          webPushMessage={webPushMessage}
+          onToggleWebPush={toggleWebPush}
+          alertCenterBusy={alertCenterBusy}
+          alertCenterStatus={alertCenterStatus}
+          alertCenterMessage={alertCenterMessage}
+          onRefreshAlertCenter={refreshAlertCenter}
+          onSendTestAlert={sendTestAlert}
         />
       )
     }
