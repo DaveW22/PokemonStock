@@ -15,7 +15,7 @@ const statusWeight = {
   out: 3,
 }
 
-export default function Watchlist({ products, onOpen, onToggleFavourite }) {
+export default function Watchlist({ products, onOpen, onToggleFavourite, onUpdateLink }) {
   const [sortMode, setSortMode] = useState('priority')
   const [viewMode, setViewMode] = useState('list')
 
@@ -113,6 +113,7 @@ export default function Watchlist({ products, onOpen, onToggleFavourite }) {
             viewMode={viewMode}
             onOpen={onOpen}
             onToggleFavourite={onToggleFavourite}
+            onUpdateLink={onUpdateLink}
           />
         ))}
       </div>

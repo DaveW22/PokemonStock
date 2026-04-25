@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ExternalLink, Star } from 'lucide-react'
+import { ExternalLink, Link2, Star } from 'lucide-react'
 import StatusPill from './StatusPill'
 
 const priorityTone = {
@@ -8,7 +8,14 @@ const priorityTone = {
   Low: 'text-slate-300 border-slate-400/20 bg-slate-500/10',
 }
 
-export default function ProductRow({ product, index, viewMode = 'list', onOpen, onToggleFavourite }) {
+export default function ProductRow({
+  product,
+  index,
+  viewMode = 'list',
+  onOpen,
+  onToggleFavourite,
+  onUpdateLink,
+}) {
   const isCompact = viewMode === 'compact'
 
   let host = 'product page'
@@ -104,21 +111,39 @@ export default function ProductRow({ product, index, viewMode = 'list', onOpen, 
       )}
 
       {isCompact ? (
-        <button
-          onClick={() => onOpen(product)}
-          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-500/12 text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20"
-          aria-label="Open product page"
-        >
-          <ExternalLink className="h-4 w-4" />
-        </button>
+        <>
+          <button
+            onClick={() => onUpdateLink?.(product)}
+            className="absolute bottom-3 left-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/12 bg-white/[0.08] text-slate-100 transition hover:-translate-y-0.5 hover:border-violet-400/20"
+            aria-label="Edit product link"
+          >
+            <Link2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onOpen(product)}
+            className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-500/12 text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20"
+            aria-label="Open product page"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        </>
       ) : (
-        <button
-          onClick={() => onOpen(product)}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-medium text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20 md:py-3"
-        >
-          <span>Open page</span>
-          <ExternalLink className="h-4 w-4" />
-        </button>
+        <>
+          <button
+            onClick={() => onOpen(product)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-medium text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20 md:py-3"
+          >
+            <span>Open page</span>
+            <ExternalLink className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onUpdateLink?.(product)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:-translate-y-0.5 hover:border-violet-400/20 hover:text-white md:py-3"
+          >
+            <Link2 className="h-4 w-4" />
+            <span>Edit link</span>
+          </button>
+        </>
       )}
     </motion.div>
   )

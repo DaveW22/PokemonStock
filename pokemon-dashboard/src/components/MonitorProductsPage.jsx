@@ -48,16 +48,19 @@ export default function MonitorProductsPage({ products, onAddProduct, addingProd
       <PanelCard icon={Search} title="Monitor Product">
         <form onSubmit={handleSubmit} className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Add store URL</p>
+          <p className="text-xs text-slate-400">
+            Soft URL check runs before save and auto-fills product details from the page when available.
+          </p>
           <input
             value={newProduct.name}
             onChange={(event) => setNewProduct((current) => ({ ...current, name: event.target.value }))}
-            placeholder="Product name"
+            placeholder="Product name (optional, auto-filled if found)"
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
           />
           <input
             value={newProduct.retailer}
             onChange={(event) => setNewProduct((current) => ({ ...current, retailer: event.target.value }))}
-            placeholder="Retailer (e.g. Argos)"
+            placeholder="Retailer (optional, auto-filled from URL host)"
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
           />
           <input

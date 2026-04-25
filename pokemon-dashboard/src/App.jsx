@@ -42,6 +42,7 @@ export default function App() {
     refresh,
     runManualCheck: invokeManualCheck,
     addProduct,
+    updateProductLink,
     addingProduct,
     addProductMessage,
     actionMessage,
@@ -155,6 +156,12 @@ export default function App() {
       ...current,
       [product.id]: !(current[product.id] ?? product.favourite ?? false),
     }))
+  }
+
+  async function handleUpdateProductLink(product) {
+    const nextUrl = window.prompt('Update product URL', product?.url || '')
+    if (!nextUrl || nextUrl === product?.url) return
+    await updateProductLink({ productId: product.id, url: nextUrl })
   }
 
   function handleTouchStart(event) {
@@ -321,6 +328,7 @@ export default function App() {
           products={products}
           onOpen={openProductPage}
           onToggleFavourite={toggleFavourite}
+          onUpdateLink={handleUpdateProductLink}
         />
 
         <motion.div

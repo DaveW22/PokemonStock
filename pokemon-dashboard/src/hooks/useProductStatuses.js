@@ -130,6 +130,27 @@ export function useProductStatuses() {
     return { data, error: null }
   }, [refresh])
 
+  const verifyProductUrl = useCallback(async (inputUrl) => {
+    if (!hasSupabaseConfig || !supabase) {
+      return { data: null, error: new Error('Missing Supabase environment variables. Cannot verify URL.') }
+    }
+
+    const { data, error: verifyError } = await supabase.functions.invoke('verify-product-url', {
+      body: { url: inputUrl },
+    })
+
+    if (verifyError) {
+      return { data: null, error: verifyError }
+    }
+
+    if (!data?.ok || !data?.isProduct) {
+      const reason = data?.reason || 'Soft URL check failed. URL does not look like a product page.'
+      return { data, error: new Error(reason) }
+    }
+
+    return { data, error: null }
+  }, [])
+
   const addProduct = useCallback(
     async ({ name, retailer, url, price, priority }) => {
       if (!hasSupabaseConfig || !supabase) {
@@ -145,8 +166,8 @@ export function useProductStatuses() {
         const normalizedPrice = (price || '').trim()
         const normalizedPriority = (priority || 'Medium').trim()
 
-        if (!normalizedName || !normalizedRetailer || !normalizedUrl) {
-          const validationError = new Error('Name, retailer, and URL are required.')
+        if (!normalizedUrl) {
+          const validationError = new Error('URL is required.')
           setAddProductMessage(validationError.message)
           return { data: null, error: validationError }
         }
@@ -162,13 +183,23 @@ export function useProductStatuses() {
         setAddingProduct(true)
         setAddProductMessage('')
 
+        const { data: verifiedData, error: verifyError } = await verifyProductUrl(normalizedUrl)
+        if (verifyError) {
+          setAddProductMessage(verifyError.message)
+          return { data: null, error: verifyError }
+        }
+
+        const derivedName = normalizedName || verifiedData?.title || 'New Product'
+        const derivedRetailer = normalizedRetailer || verifiedData?.retailer || 'Unknown retailer'
+        const derivedPrice = normalizedPrice || verifiedData?.price || null
+
         const { data, error: insertError } = await supabase
           .from('products')
           .insert({
-            name: normalizedName,
-            retailer: normalizedRetailer,
-            url: normalizedUrl,
-            price: normalizedPrice || null,
+            name: derivedName,
+            retailer: derivedRetailer,
+            url: verifiedData?.url || normalizedUrl,
+            price: derivedPrice,
             priority: ['High', 'Medium', 'Low'].includes(normalizedPriority) ? normalizedPriority : 'Medium',
             is_active: true,
           })
@@ -180,14 +211,57 @@ export function useProductStatuses() {
           return { data: null, error: insertError }
         }
 
-        setAddProductMessage('Product URL added. It will be included in the next stock check.')
+        setAddProductMessage('Product URL added after soft verification and info autofill.')
         await refresh()
         return { data, error: null }
       } finally {
         setAddingProduct(false)
       }
     },
-    [refresh],
+    [refresh, verifyProductUrl],
+  )
+
+  const updateProductLink = useCallback(
+    async ({ productId, url }) => {
+      if (!hasSupabaseConfig || !supabase) {
+        const missingConfigError = new Error('Missing Supabase environment variables. Cannot update product URL.')
+        setActionMessage(missingConfigError.message)
+        return { data: null, error: missingConfigError }
+      }
+
+      const normalizedUrl = (url || '').trim()
+      if (!normalizedUrl) {
+        const validationError = new Error('URL is required.')
+        setActionMessage(validationError.message)
+        return { data: null, error: validationError }
+      }
+
+      const { data: verifiedData, error: verifyError } = await verifyProductUrl(normalizedUrl)
+      if (verifyError) {
+        setActionMessage(verifyError.message)
+        return { data: null, error: verifyError }
+      }
+
+      const { data, error: updateError } = await supabase
+        .from('products')
+        .update({
+          url: verifiedData?.url || normalizedUrl,
+          price: verifiedData?.price || undefined,
+        })
+        .eq('id', productId)
+        .select('id, name, retailer, url')
+        .single()
+
+      if (updateError) {
+        setActionMessage(updateError.message)
+        return { data: null, error: updateError }
+      }
+
+      setActionMessage('Product link updated successfully.')
+      await refresh()
+      return { data, error: null }
+    },
+    [refresh, verifyProductUrl],
   )
 
   useEffect(() => {
@@ -225,10 +299,22 @@ export function useProductStatuses() {
       refresh,
       runManualCheck,
       addProduct,
+      updateProductLink,
       addingProduct,
       addProductMessage,
       actionMessage,
     }),
-    [actionMessage, addProduct, addProductMessage, addingProduct, error, loading, products, refresh, runManualCheck],
+    [
+      actionMessage,
+      addProduct,
+      addProductMessage,
+      addingProduct,
+      error,
+      loading,
+      products,
+      refresh,
+      runManualCheck,
+      updateProductLink,
+    ],
   )
 }
