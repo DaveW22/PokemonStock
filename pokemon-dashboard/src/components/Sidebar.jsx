@@ -1,15 +1,14 @@
-import { Heart, Github, History, Info, LayoutDashboard, Settings } from 'lucide-react'
+import { Bell, Heart, LayoutDashboard, Search, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { label: 'Watchlist', icon: LayoutDashboard, active: false },
-  { label: 'History', icon: History, active: false },
-  { label: 'Settings', icon: Settings, active: false },
-  { label: 'About', icon: Info, active: false },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'monitor-products', label: 'Monitor Product', icon: Search },
+  { id: 'alerts', label: 'Alert Center', icon: Bell },
 ]
 
-export default function Sidebar({ lastCheck, nextCheck }) {
+export default function Sidebar({ lastCheck, nextCheck, currentPage, onNavigate }) {
   return (
     <aside className="flex h-full flex-col justify-between rounded-[32px] border border-white/8 bg-white/5 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl lg:min-h-[calc(100vh-3rem)]">
       <div>
@@ -31,12 +30,16 @@ export default function Sidebar({ lastCheck, nextCheck }) {
         <nav className="mt-8 space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon
+            const active = item.id === currentPage
+
             return (
               <button
-                key={item.label}
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(item.id)}
                 className={[
                   'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                  item.active
+                  active
                     ? 'bg-violet-500/18 text-white shadow-glow-violet'
                     : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
                 ].join(' ')}

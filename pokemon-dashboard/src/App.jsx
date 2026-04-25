@@ -4,6 +4,8 @@ import { Activity, Menu, PackageSearch, RefreshCw, X } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Hero from './components/Hero'
 import RightPanel from './components/RightPanel'
+import SettingsPage from './components/SettingsPage'
+import MonitorProductsPage from './components/MonitorProductsPage'
 import StatCard from './components/StatCard'
 import Watchlist from './components/Watchlist'
 import { products as initialProducts } from './data/products'
@@ -44,16 +46,20 @@ export default function App() {
     addProductMessage,
     actionMessage,
   } = useProductStatuses()
+
   const [favourites, setFavourites] = useState({})
+  const [currentPage, setCurrentPage] = useState('dashboard')
   const [checkInterval, setCheckInterval] = useState('Every 3 minutes')
   const [menuOpen, setMenuOpen] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const [pullRefreshing, setPullRefreshing] = useState(false)
   const pullStartYRef = useRef(null)
+
   const [webPushSupported] = useState(() => supportsWebPush())
   const [webPushEnabled, setWebPushEnabled] = useState(false)
   const [webPushBusy, setWebPushBusy] = useState(false)
   const [webPushMessage, setWebPushMessage] = useState('')
+
   const products = useMemo(() => {
     const sourceProducts = liveProducts.length > 0 ? liveProducts : initialProducts
 
@@ -80,46 +86,6 @@ export default function App() {
     ? formatClock(new Date(latestCheckedAt.getTime() + intervalMinutesMap[checkInterval] * 60_000))
     : 'Pending'
 
-  async function runManualCheck() {
-    console.log('[Pokemon Stock Watcher] runManualCheck() invoked')
-    await invokeManualCheck()
-    await refresh()
-  }
-
-  async function runRefresh(reason = 'manual') {
-    console.log('[Pokemon Stock Watcher] runRefresh()', reason)
-    await refresh()
-  }
-
-  function openProductPage(product) {
-    console.log('[Pokemon Stock Watcher] openProductPage()', product)
-    if (product?.url) {
-      window.open(product.url, '_blank', 'noopener,noreferrer')
-    }
-  }
-
-  function toggleFavourite(product) {
-    console.log('[Pokemon Stock Watcher] toggleFavourite()', product)
-    setFavourites((current) => ({
-      ...current,
-      [product.id]: !(current[product.id] ?? product.favourite ?? false),
-    }))
-  }
-
-  function updateCheckInterval(value) {
-    console.log('[Pokemon Stock Watcher] updateCheckInterval()', value)
-    setCheckInterval(value)
-  }
-
-  async function handleAddProduct(payload) {
-    const result = await addProduct(payload)
-    if (!result.error) {
-      setMenuOpen(false)
-    }
-
-    return result
-  }
-
   const summary = useMemo(() => {
     const high = products.filter((product) => product.priority === 'High').length
     const medium = products.filter((product) => product.priority === 'Medium').length
@@ -144,19 +110,52 @@ export default function App() {
     }
 
     if (error) {
-      if (error.includes('Missing Supabase environment variables')) {
-        return 'Live checks are unavailable until Supabase environment values are configured in deployment.'
-      }
-
       return error
     }
 
-    if (liveProducts.length > 0) {
+    if (hasSupabaseConfig) {
       return 'Reading live products and latest statuses from Supabase.'
     }
 
-    return 'Using fallback products. Connect Supabase env values to enable live checks.'
-  }, [actionMessage, error, liveProducts.length])
+    return 'Dashboard ready. Connect Supabase to enable live checks.'
+  }, [actionMessage, error])
+
+  function navigateTo(pageId) {
+    setCurrentPage(pageId)
+    setMenuOpen(false)
+  }
+
+  function updateCheckInterval(value) {
+    setCheckInterval(value)
+  }
+
+  async function runManualCheck() {
+    await invokeManualCheck()
+    await refresh()
+  }
+
+  async function runRefresh() {
+    await refresh()
+  }
+
+  async function handleAddProduct(payload) {
+    const result = await addProduct(payload)
+    if (!result.error) setMenuOpen(false)
+    return result
+  }
+
+  function openProductPage(product) {
+    if (product?.url) {
+      window.open(product.url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  function toggleFavourite(product) {
+    setFavourites((current) => ({
+      ...current,
+      [product.id]: !(current[product.id] ?? product.favourite ?? false),
+    }))
+  }
 
   function handleTouchStart(event) {
     if (window.scrollY > 0 || pullRefreshing) return
@@ -178,7 +177,7 @@ export default function App() {
     if (pullDistance >= 78 && !pullRefreshing) {
       try {
         setPullRefreshing(true)
-        await runRefresh('pull-to-refresh')
+        await runRefresh()
       } finally {
         setPullRefreshing(false)
       }
@@ -268,6 +267,89 @@ export default function App() {
     }
   }
 
+  function renderMainContent() {
+    if (currentPage === 'settings' || currentPage === 'alerts') {
+      return (
+        <SettingsPage
+          checkInterval={checkInterval}
+          onRunManualCheck={runManualCheck}
+          onUpdateCheckInterval={updateCheckInterval}
+          webPushSupported={webPushSupported}
+          webPushEnabled={webPushEnabled}
+          webPushBusy={webPushBusy}
+          webPushMessage={webPushMessage}
+          onToggleWebPush={toggleWebPush}
+        />
+      )
+    }
+
+    if (currentPage === 'monitor-products') {
+      return (
+        <MonitorProductsPage
+          products={products}
+          onAddProduct={handleAddProduct}
+          addingProduct={addingProduct}
+          addProductMessage={addProductMessage}
+        />
+      )
+    }
+
+    return (
+      <>
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px_260px] 2xl:gap-5">
+          <div className="2xl:col-span-1">
+            <Hero />
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-1">
+            <StatCard
+              title="Available now"
+              value={summary.available}
+              subtext="item"
+              linkText="See watchlist"
+              tone="emerald"
+            />
+            <StatCard
+              title="Check cycle"
+              value="3m"
+              subtext="minutes"
+              meta={`Next: ${nextCheck}`}
+            />
+          </div>
+        </div>
+
+        <Watchlist
+          products={products}
+          onOpen={openProductPage}
+          onToggleFavourite={toggleFavourite}
+        />
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.35 }}
+          className="mt-6 flex flex-col gap-3 rounded-[24px] border border-emerald-400/15 bg-emerald-500/8 px-5 py-4 shadow-glow-emerald sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/12 text-emerald-300">
+              <Activity className={loading ? 'h-5 w-5 animate-pulse' : 'h-5 w-5'} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Watching for stock</p>
+              <p className="text-sm text-emerald-200/80">
+                {loading ? 'Refreshing status from Supabase' : 'Running continuously'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-emerald-200/80">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            <PackageSearch className="h-4 w-4" />
+            <span>{hasSupabaseConfig ? 'Supabase live mode active' : 'Local fallback mode active'}</span>
+          </div>
+        </motion.div>
+      </>
+    )
+  }
+
   return (
     <div
       className="min-h-screen bg-transparent p-2 text-white md:p-4 lg:p-6"
@@ -283,6 +365,7 @@ export default function App() {
           </span>
         ) : null}
       </div>
+
       <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[28px] border border-white/8 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-4 lg:rounded-[36px] lg:p-6">
         <header className="mb-4 rounded-2xl border border-white/8 bg-white/5 p-3 xl:hidden">
           <div className="flex items-center justify-between">
@@ -309,20 +392,27 @@ export default function App() {
               {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
+
           {menuOpen ? (
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              {['Dashboard', 'Watchlist', 'History', 'Settings', 'About'].map((item) => (
+              {[
+                { label: 'Dashboard', page: 'dashboard' },
+                { label: 'Settings', page: 'settings' },
+                { label: 'Monitor Product', page: 'monitor-products' },
+                { label: 'Alert Center', page: 'alerts' },
+              ].map((item) => (
                 <button
-                  key={item}
+                  key={item.label}
                   type="button"
+                  onClick={() => navigateTo(item.page)}
                   className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-slate-200"
                 >
-                  {item}
+                  {item.label}
                 </button>
               ))}
               <button
                 type="button"
-                onClick={() => runRefresh('mobile-header')}
+                onClick={() => runRefresh()}
                 className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-emerald-100"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -334,79 +424,21 @@ export default function App() {
 
         <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_330px] xl:gap-6">
           <div className="hidden xl:block">
-            <Sidebar lastCheck={lastCheck} nextCheck={nextCheck} />
+            <Sidebar
+              lastCheck={lastCheck}
+              nextCheck={nextCheck}
+              currentPage={currentPage}
+              onNavigate={navigateTo}
+            />
           </div>
 
-          <main className="min-w-0">
-            <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px_260px] 2xl:gap-5">
-              <div className="2xl:col-span-1">
-                <Hero />
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-1">
-                <StatCard
-                  title="Available now"
-                  value={summary.available}
-                  subtext="item"
-                  linkText="See watchlist"
-                  tone="emerald"
-                />
-                <StatCard
-                  title="Check cycle"
-                  value="3m"
-                  subtext="minutes"
-                  meta={`Next: ${nextCheck}`}
-                />
-              </div>
-            </div>
+          <main className="min-w-0">{renderMainContent()}</main>
 
-            <Watchlist
-              products={products}
-              onOpen={openProductPage}
-              onToggleFavourite={toggleFavourite}
-            />
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.35 }}
-              className="mt-6 flex flex-col gap-3 rounded-[24px] border border-emerald-400/15 bg-emerald-500/8 px-5 py-4 shadow-glow-emerald sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/12 text-emerald-300">
-                  <Activity className={loading ? 'h-5 w-5 animate-pulse' : 'h-5 w-5'} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">Watching for stock</p>
-                  <p className="text-sm text-emerald-200/80">
-                    {loading ? 'Refreshing status from Supabase' : 'Running continuously'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-emerald-200/80">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                <PackageSearch className="h-4 w-4" />
-                <span>{liveProducts.length > 0 ? 'Supabase live mode active' : 'Local fallback mode active'}</span>
-              </div>
-            </motion.div>
-          </main>
-
-          <aside>
-            <RightPanel
-              checkInterval={checkInterval}
-              onRunManualCheck={runManualCheck}
-              onUpdateCheckInterval={updateCheckInterval}
-              summary={summary}
-              statusNote={statusNote}
-              onAddProduct={handleAddProduct}
-              addingProduct={addingProduct}
-              addProductMessage={addProductMessage}
-              webPushSupported={webPushSupported}
-              webPushEnabled={webPushEnabled}
-              webPushBusy={webPushBusy}
-              webPushMessage={webPushMessage}
-              onToggleWebPush={toggleWebPush}
-            />
-          </aside>
+          {currentPage === 'dashboard' ? (
+            <aside>
+              <RightPanel summary={summary} statusNote={statusNote} />
+            </aside>
+          ) : null}
         </div>
       </div>
     </div>

@@ -77,12 +77,11 @@ export function useProductStatuses() {
   const [addingProduct, setAddingProduct] = useState(false)
   const [addProductMessage, setAddProductMessage] = useState('')
   const [actionMessage, setActionMessage] = useState('')
-  const [error, setError] = useState(
-    hasSupabaseConfig ? null : 'Using fallback product data. Configure Supabase env vars for live checks.',
-  )
+  const [error, setError] = useState(null)
 
   const refresh = useCallback(async () => {
     if (!hasSupabaseConfig || !supabase) {
+      setError(null)
       setLoading(false)
       return []
     }
