@@ -37,13 +37,13 @@ export default function StatusPill({ status }) {
       animate={status === 'checking' ? { opacity: [0.75, 1, 0.75] } : { opacity: 1 }}
       transition={status === 'checking' ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : {}}
       className={[
-        'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium',
+        'inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full border px-3 py-1.5 text-xs font-medium',
         statusConfig.className,
       ].join(' ')}
     >
       <span className={['h-2 w-2 rounded-full', statusConfig.dot].join(' ')} />
       <Icon className={status === 'checking' ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
-      <span>{statusConfig.label}</span>
+      <span className="truncate">{statusConfig.label}</span>
     </motion.div>
   )
 }

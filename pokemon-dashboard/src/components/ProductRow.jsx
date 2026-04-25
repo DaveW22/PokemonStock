@@ -25,7 +25,7 @@ export default function ProductRow({ product, index, viewMode = 'list', onOpen, 
       transition={{ delay: 0.08 * index, duration: 0.32, ease: 'easeOut' }}
       whileHover={{ y: -2 }}
       className={[
-        'grid gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] p-3 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] md:gap-4 md:rounded-[28px] md:p-4',
+        'grid min-w-0 gap-3 overflow-hidden rounded-[20px] border border-white/8 bg-white/[0.04] p-3 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] md:gap-4 md:rounded-[28px] md:p-4',
         isCompact
           ? 'xl:grid-cols-[56px_76px_1.6fr_130px_120px_140px_52px] xl:items-center'
           : 'xl:grid-cols-[56px_76px_1.4fr_140px_110px_130px_140px_140px_52px] xl:items-center',
@@ -43,9 +43,9 @@ export default function ProductRow({ product, index, viewMode = 'list', onOpen, 
         </div>
       </div>
 
-      <div>
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-white">{product.name}</h3>
+          <h3 className="max-w-full break-words text-sm font-semibold leading-5 text-white">{product.name}</h3>
           <span className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-200">
             {product.retailer}
           </span>
@@ -56,12 +56,12 @@ export default function ProductRow({ product, index, viewMode = 'list', onOpen, 
             {product.priority}
           </span>
         </div>
-        <p className="mt-2 text-sm text-slate-400">{host}{product.urlSuffix}</p>
+        <p className="mt-2 max-w-full truncate text-sm text-slate-400">{host}{product.urlSuffix}</p>
       </div>
 
-      <div>
+      <div className="min-w-0">
         <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Price</p>
-        <p className="mt-1 text-sm font-medium text-white">{product.price}</p>
+        <p className="mt-1 truncate text-sm font-medium text-white">{product.price}</p>
       </div>
 
       <div>

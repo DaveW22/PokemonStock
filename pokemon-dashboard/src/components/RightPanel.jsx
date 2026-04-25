@@ -6,7 +6,7 @@ function PanelCard({ icon: Icon, title, children }) {
   return (
     <motion.section
       whileHover={{ y: -2 }}
-      className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5 shadow-xl shadow-black/25"
+      className="min-w-0 overflow-hidden rounded-[28px] border border-white/8 bg-white/[0.04] p-5 shadow-xl shadow-black/25"
     >
       <div className="mb-5 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-400/15 bg-violet-500/10 text-violet-200">
@@ -27,10 +27,10 @@ function ToggleRow({ label, value, accent = 'default', disabled = false, note, o
       disabled={disabled || !onClick || loading}
       className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-left"
     >
-      <div>
-        <p className="text-sm font-medium text-white">{label}</p>
-        {note ? <p className="mt-1 text-xs text-slate-400">{note}</p> : null}
-        {disabled ? <p className="mt-1 text-xs text-slate-500">Disabled / not recommended</p> : null}
+      <div className="min-w-0 pr-3">
+        <p className="truncate text-sm font-medium text-white">{label}</p>
+        {note ? <p className="mt-1 break-words text-xs text-slate-400">{note}</p> : null}
+        {disabled ? <p className="mt-1 break-words text-xs text-slate-500">Disabled / not recommended</p> : null}
       </div>
       <div
         className={[
@@ -192,7 +192,7 @@ export default function RightPanel({
             >
               {addingProduct ? 'Adding...' : 'Add URL for stock checks'}
             </button>
-            {addProductMessage ? <p className="text-xs text-slate-300">{addProductMessage}</p> : null}
+            {addProductMessage ? <p className="break-words text-xs text-slate-300">{addProductMessage}</p> : null}
           </form>
         </div>
       </PanelCard>
@@ -223,7 +223,7 @@ export default function RightPanel({
           </div>
           <div className="flex items-center gap-2 pt-1 text-xs text-slate-500">
             <Clock className="h-3.5 w-3.5" />
-            {statusNote}
+            <span className="break-words">{statusNote}</span>
           </div>
         </div>
       </PanelCard>
