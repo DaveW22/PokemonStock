@@ -80,14 +80,17 @@ export default function RightPanel({
 
   async function handleSubmit(event) {
     event.preventDefault()
-    await onAddProduct(newProduct)
-    setNewProduct((current) => ({
-      ...current,
-      name: '',
-      retailer: '',
-      url: '',
-      price: '',
-    }))
+    const result = await onAddProduct(newProduct)
+
+    if (!result?.error) {
+      setNewProduct((current) => ({
+        ...current,
+        name: '',
+        retailer: '',
+        url: '',
+        price: '',
+      }))
+    }
   }
 
   return (

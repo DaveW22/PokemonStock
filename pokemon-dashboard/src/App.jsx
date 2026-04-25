@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Menu, PackageSearch, X } from 'lucide-react'
+import { Activity, Menu, PackageSearch, RefreshCw, X } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Hero from './components/Hero'
 import RightPanel from './components/RightPanel'
@@ -42,10 +42,14 @@ export default function App() {
     addProduct,
     addingProduct,
     addProductMessage,
+    actionMessage,
   } = useProductStatuses()
   const [favourites, setFavourites] = useState({})
   const [checkInterval, setCheckInterval] = useState('Every 3 minutes')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [pullDistance, setPullDistance] = useState(0)
+  const [pullRefreshing, setPullRefreshing] = useState(false)
+  const pullStartYRef = useRef(null)
   const [webPushSupported] = useState(() => supportsWebPush())
   const [webPushEnabled, setWebPushEnabled] = useState(false)
   const [webPushBusy, setWebPushBusy] = useState(false)
@@ -82,6 +86,11 @@ export default function App() {
     await refresh()
   }
 
+  async function runRefresh(reason = 'manual') {
+    console.log('[Pokemon Stock Watcher] runRefresh()', reason)
+    await refresh()
+  }
+
   function openProductPage(product) {
     console.log('[Pokemon Stock Watcher] openProductPage()', product)
     if (product?.url) {
@@ -107,6 +116,8 @@ export default function App() {
     if (!result.error) {
       setMenuOpen(false)
     }
+
+    return result
   }
 
   const summary = useMemo(() => {
@@ -123,11 +134,59 @@ export default function App() {
     }
   }, [products])
 
-  const statusNote = error
-    ? error
-    : liveProducts.length > 0
-      ? 'Reading live products and latest statuses from Supabase.'
-      : 'Supabase is ready. Add env vars to switch from fallback data to live data.'
+  const statusNote = useMemo(() => {
+    if (actionMessage) {
+      if (actionMessage.includes('Missing Supabase environment variables')) {
+        return 'Manual check unavailable until Supabase env values are configured in deployment.'
+      }
+
+      return actionMessage
+    }
+
+    if (error) {
+      if (error.includes('Missing Supabase environment variables')) {
+        return 'Live checks are unavailable until Supabase environment values are configured in deployment.'
+      }
+
+      return error
+    }
+
+    if (liveProducts.length > 0) {
+      return 'Reading live products and latest statuses from Supabase.'
+    }
+
+    return 'Using fallback products. Connect Supabase env values to enable live checks.'
+  }, [actionMessage, error, liveProducts.length])
+
+  function handleTouchStart(event) {
+    if (window.scrollY > 0 || pullRefreshing) return
+    pullStartYRef.current = event.touches[0]?.clientY ?? null
+  }
+
+  function handleTouchMove(event) {
+    if (pullStartYRef.current == null || pullRefreshing) return
+
+    const currentY = event.touches[0]?.clientY ?? pullStartYRef.current
+    const delta = currentY - pullStartYRef.current
+
+    if (delta > 0) {
+      setPullDistance(Math.min(delta, 110))
+    }
+  }
+
+  async function handleTouchEnd() {
+    if (pullDistance >= 78 && !pullRefreshing) {
+      try {
+        setPullRefreshing(true)
+        await runRefresh('pull-to-refresh')
+      } finally {
+        setPullRefreshing(false)
+      }
+    }
+
+    setPullDistance(0)
+    pullStartYRef.current = null
+  }
 
   useEffect(() => {
     const readinessMessage = getWebPushReadinessMessage()
@@ -189,7 +248,20 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent p-2 text-white md:p-4 lg:p-6">
+    <div
+      className="min-h-screen bg-transparent p-2 text-white md:p-4 lg:p-6"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="mx-auto flex h-7 max-w-[1800px] items-center justify-center text-xs text-slate-300">
+        {pullRefreshing || pullDistance > 0 ? (
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <RefreshCw className={pullRefreshing ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+            {pullRefreshing ? 'Refreshing...' : pullDistance >= 78 ? 'Release to refresh' : 'Pull to refresh'}
+          </span>
+        ) : null}
+      </div>
       <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[28px] border border-white/8 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-4 lg:rounded-[36px] lg:p-6">
         <header className="mb-4 rounded-2xl border border-white/8 bg-white/5 p-3 xl:hidden">
           <div className="flex items-center justify-between">
@@ -217,6 +289,14 @@ export default function App() {
                   {item}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => runRefresh('mobile-header')}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-emerald-100"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh now
+              </button>
             </div>
           ) : null}
         </header>

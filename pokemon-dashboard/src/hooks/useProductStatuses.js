@@ -76,8 +76,9 @@ export function useProductStatuses() {
   const [loading, setLoading] = useState(hasSupabaseConfig)
   const [addingProduct, setAddingProduct] = useState(false)
   const [addProductMessage, setAddProductMessage] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
   const [error, setError] = useState(
-    hasSupabaseConfig ? null : 'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Using local fallback data.',
+    hasSupabaseConfig ? null : 'Using fallback product data. Configure Supabase env vars for live checks.',
   )
 
   const refresh = useCallback(async () => {
@@ -111,16 +112,18 @@ export function useProductStatuses() {
   const runManualCheck = useCallback(async () => {
     if (!hasSupabaseConfig || !supabase) {
       const missingConfigError = 'Missing Supabase environment variables. Cannot invoke check-stock.'
-      setError(missingConfigError)
+      setActionMessage(missingConfigError)
       return { data: null, error: new Error(missingConfigError) }
     }
+
+    setActionMessage('')
 
     const { data, error: invokeError } = await supabase.functions.invoke('check-stock', {
       body: {},
     })
 
     if (invokeError) {
-      setError(invokeError.message)
+      setActionMessage(invokeError.message)
       return { data: null, error: invokeError }
     }
 
@@ -225,7 +228,8 @@ export function useProductStatuses() {
       addProduct,
       addingProduct,
       addProductMessage,
+      actionMessage,
     }),
-    [addProduct, addProductMessage, addingProduct, error, loading, products, refresh, runManualCheck],
+    [actionMessage, addProduct, addProductMessage, addingProduct, error, loading, products, refresh, runManualCheck],
   )
 }

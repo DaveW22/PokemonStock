@@ -8,14 +8,28 @@ const priorityTone = {
   Low: 'text-slate-300 border-slate-400/20 bg-slate-500/10',
 }
 
-export default function ProductRow({ product, index, onOpen, onToggleFavourite }) {
+export default function ProductRow({ product, index, viewMode = 'list', onOpen, onToggleFavourite }) {
+  const isCompact = viewMode === 'compact'
+
+  let host = 'product page'
+  try {
+    host = new URL(product.url).host
+  } catch {
+    host = 'product page'
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.08 * index, duration: 0.32, ease: 'easeOut' }}
       whileHover={{ y: -2 }}
-      className="grid gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] p-3 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] md:gap-4 md:rounded-[28px] md:p-4 xl:grid-cols-[56px_76px_1.4fr_140px_110px_130px_140px_140px_52px] xl:items-center"
+      className={[
+        'grid gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] p-3 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] md:gap-4 md:rounded-[28px] md:p-4',
+        isCompact
+          ? 'xl:grid-cols-[56px_76px_1.6fr_130px_120px_140px_52px] xl:items-center'
+          : 'xl:grid-cols-[56px_76px_1.4fr_140px_110px_130px_140px_140px_52px] xl:items-center',
+      ].join(' ')}
     >
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-semibold text-white">
@@ -42,7 +56,7 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
             {product.priority}
           </span>
         </div>
-        <p className="mt-2 text-sm text-slate-400">smythstoys.com{product.urlSuffix}</p>
+        <p className="mt-2 text-sm text-slate-400">{host}{product.urlSuffix}</p>
       </div>
 
       <div>
@@ -57,16 +71,18 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
         </div>
       </div>
 
-      <div>
-        <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Last checked</p>
-        <p className="mt-1 text-sm text-slate-300">{product.lastChecked}</p>
-      </div>
+      {isCompact ? null : (
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Last checked</p>
+          <p className="mt-1 text-sm text-slate-300">{product.lastChecked}</p>
+        </div>
+      )}
 
       <button
         onClick={() => onOpen(product)}
         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-medium text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20 md:py-3"
       >
-        <span>Open page</span>
+        <span>{isCompact ? 'Open' : 'Open page'}</span>
         <ExternalLink className="h-4 w-4" />
       </button>
 
