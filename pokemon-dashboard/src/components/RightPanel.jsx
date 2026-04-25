@@ -1,5 +1,6 @@
 import { Bell, CheckCircle2, Clock, RefreshCw, Settings, ShieldCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 
 function PanelCard({ icon: Icon, title, children }) {
   return (
@@ -58,6 +59,9 @@ export default function RightPanel({
   checkInterval,
   onRunManualCheck,
   onUpdateCheckInterval,
+  onAddProduct,
+  addingProduct,
+  addProductMessage,
   summary,
   statusNote,
   webPushSupported,
@@ -66,8 +70,28 @@ export default function RightPanel({
   webPushMessage,
   onToggleWebPush,
 }) {
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    retailer: '',
+    url: '',
+    price: '',
+    priority: 'Medium',
+  })
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    await onAddProduct(newProduct)
+    setNewProduct((current) => ({
+      ...current,
+      name: '',
+      retailer: '',
+      url: '',
+      price: '',
+    }))
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 md:space-y-5">
       <PanelCard icon={Bell} title="Alert & Notification">
         <div className="space-y-3">
           <ToggleRow
@@ -88,7 +112,7 @@ export default function RightPanel({
       </PanelCard>
 
       <PanelCard icon={Settings} title="Monitor Settings">
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
               Check interval
@@ -120,6 +144,53 @@ export default function RightPanel({
             <RefreshCw className="h-4 w-4" />
             Run check now
           </button>
+
+          <form onSubmit={handleSubmit} className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Add store URL</p>
+            <input
+              value={newProduct.name}
+              onChange={(event) => setNewProduct((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Product name"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
+            />
+            <input
+              value={newProduct.retailer}
+              onChange={(event) => setNewProduct((current) => ({ ...current, retailer: event.target.value }))}
+              placeholder="Retailer (e.g. Argos)"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
+            />
+            <input
+              value={newProduct.url}
+              onChange={(event) => setNewProduct((current) => ({ ...current, url: event.target.value }))}
+              placeholder="https://example.com/product"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={newProduct.price}
+                onChange={(event) => setNewProduct((current) => ({ ...current, price: event.target.value }))}
+                placeholder="Price (optional)"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
+              />
+              <select
+                value={newProduct.priority}
+                onChange={(event) => setNewProduct((current) => ({ ...current, priority: event.target.value }))}
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none"
+              >
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={addingProduct}
+              className="w-full rounded-xl border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-sm font-medium text-emerald-100"
+            >
+              {addingProduct ? 'Adding...' : 'Add URL for stock checks'}
+            </button>
+            {addProductMessage ? <p className="text-xs text-slate-300">{addProductMessage}</p> : null}
+          </form>
         </div>
       </PanelCard>
 

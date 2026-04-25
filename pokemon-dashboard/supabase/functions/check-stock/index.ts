@@ -8,16 +8,32 @@ const corsHeaders = {
 
 const availableSignals = [
   'Add to Basket',
+  'Add to Cart',
+  'Buy now',
   'Click & Collect',
   'Home Delivery',
-  'Available',
+  'In Stock',
+  'In stock',
+  'Available online',
+  'available to order',
 ]
 
 const unavailableSignals = [
   'Out of Stock',
+  'Sold out',
   'Currently unavailable',
   'Not available',
+  'Unavailable online',
   'Sorry, this product is currently unavailable',
+]
+
+const blockedSignals = [
+  'Incapsula incident',
+  '_Incapsula_Resource',
+  'Request unsuccessful. Incapsula incident ID',
+  'Attention Required! | Cloudflare',
+  'cf-chl-bypass',
+  'captcha',
 ]
 
 type Product = {
@@ -92,6 +108,39 @@ function extractExcerpt(text: string, signals: string[]) {
   return text.slice(start, end).trim()
 }
 
+function parseStructuredAvailability(html: string) {
+  const lowerHtml = html.toLowerCase()
+
+  const structuredPatterns: Array<{ pattern: RegExp; status: CheckOutcome['status']; signal: string }> = [
+    {
+      pattern: /(schema\.org\/(instock|limitedavailability)|"availability"\s*:\s*"?instock"?)/i,
+      status: 'available',
+      signal: 'structured:InStock',
+    },
+    {
+      pattern: /(schema\.org\/(outofstock|discontinued)|"availability"\s*:\s*"?outofstock"?)/i,
+      status: 'unavailable',
+      signal: 'structured:OutOfStock',
+    },
+    {
+      pattern: /(schema\.org\/preorder|"availability"\s*:\s*"?preorder"?)/i,
+      status: 'available',
+      signal: 'structured:PreOrder',
+    },
+  ]
+
+  for (const candidate of structuredPatterns) {
+    if (candidate.pattern.test(lowerHtml)) {
+      return {
+        status: candidate.status,
+        signal: candidate.signal,
+      }
+    }
+  }
+
+  return null
+}
+
 async function sendTelegramMessage(botToken: string, chatId: string, message: string) {
   const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
@@ -140,6 +189,30 @@ async function evaluateProduct(product: Product): Promise<CheckOutcome> {
     }
 
     const html = await response.text()
+    const blockedMatch = blockedSignals.find((signal) =>
+      html.toLowerCase().includes(signal.toLowerCase()),
+    )
+
+    if (blockedMatch) {
+      return {
+        status: 'error',
+        matchedSignals: [blockedMatch, 'bot-protection-blocked'],
+        pageExcerpt: extractExcerpt(stripHtml(html), [blockedMatch]),
+        error: `Blocked by site bot protection while checking ${product.retailer}`,
+      }
+    }
+
+    const structuredAvailability = parseStructuredAvailability(html)
+    if (structuredAvailability) {
+      const textForExcerpt = stripHtml(html)
+      return {
+        status: structuredAvailability.status,
+        matchedSignals: [structuredAvailability.signal],
+        pageExcerpt: extractExcerpt(textForExcerpt, [structuredAvailability.signal]),
+        error: null,
+      }
+    }
+
     const text = stripHtml(html)
     const matchedAvailableSignals = availableSignals.filter((signal) =>
       text.toLowerCase().includes(signal.toLowerCase()),

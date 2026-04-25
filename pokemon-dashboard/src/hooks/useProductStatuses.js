@@ -74,6 +74,8 @@ function normalizeProducts(products, statusRows) {
 export function useProductStatuses() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(hasSupabaseConfig)
+  const [addingProduct, setAddingProduct] = useState(false)
+  const [addProductMessage, setAddProductMessage] = useState('')
   const [error, setError] = useState(
     hasSupabaseConfig ? null : 'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Using local fallback data.',
   )
@@ -126,6 +128,66 @@ export function useProductStatuses() {
     return { data, error: null }
   }, [refresh])
 
+  const addProduct = useCallback(
+    async ({ name, retailer, url, price, priority }) => {
+      if (!hasSupabaseConfig || !supabase) {
+        const missingConfigError = 'Missing Supabase environment variables. Cannot add product URL.'
+        setAddProductMessage(missingConfigError)
+        return { data: null, error: new Error(missingConfigError) }
+      }
+
+      try {
+        const normalizedName = (name || '').trim()
+        const normalizedRetailer = (retailer || '').trim()
+        const normalizedUrl = (url || '').trim()
+        const normalizedPrice = (price || '').trim()
+        const normalizedPriority = (priority || 'Medium').trim()
+
+        if (!normalizedName || !normalizedRetailer || !normalizedUrl) {
+          const validationError = new Error('Name, retailer, and URL are required.')
+          setAddProductMessage(validationError.message)
+          return { data: null, error: validationError }
+        }
+
+        try {
+          new URL(normalizedUrl)
+        } catch {
+          const invalidUrlError = new Error('Please enter a valid product URL, including https://')
+          setAddProductMessage(invalidUrlError.message)
+          return { data: null, error: invalidUrlError }
+        }
+
+        setAddingProduct(true)
+        setAddProductMessage('')
+
+        const { data, error: insertError } = await supabase
+          .from('products')
+          .insert({
+            name: normalizedName,
+            retailer: normalizedRetailer,
+            url: normalizedUrl,
+            price: normalizedPrice || null,
+            priority: ['High', 'Medium', 'Low'].includes(normalizedPriority) ? normalizedPriority : 'Medium',
+            is_active: true,
+          })
+          .select('id, name, retailer, url')
+          .single()
+
+        if (insertError) {
+          setAddProductMessage(insertError.message)
+          return { data: null, error: insertError }
+        }
+
+        setAddProductMessage('Product URL added. It will be included in the next stock check.')
+        await refresh()
+        return { data, error: null }
+      } finally {
+        setAddingProduct(false)
+      }
+    },
+    [refresh],
+  )
+
   useEffect(() => {
     refresh()
   }, [refresh])
@@ -160,7 +222,10 @@ export function useProductStatuses() {
       error,
       refresh,
       runManualCheck,
+      addProduct,
+      addingProduct,
+      addProductMessage,
     }),
-    [error, loading, products, refresh, runManualCheck],
+    [addProduct, addProductMessage, addingProduct, error, loading, products, refresh, runManualCheck],
   )
 }

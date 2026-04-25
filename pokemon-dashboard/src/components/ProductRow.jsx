@@ -15,7 +15,7 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.08 * index, duration: 0.32, ease: 'easeOut' }}
       whileHover={{ y: -2 }}
-      className="grid gap-4 rounded-[28px] border border-white/8 bg-white/[0.04] p-4 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] xl:grid-cols-[56px_76px_1.4fr_140px_110px_130px_140px_140px_52px] xl:items-center"
+      className="grid gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] p-3 shadow-xl shadow-black/20 transition hover:border-violet-400/20 hover:bg-white/[0.055] md:gap-4 md:rounded-[28px] md:p-4 xl:grid-cols-[56px_76px_1.4fr_140px_110px_130px_140px_140px_52px] xl:items-center"
     >
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-semibold text-white">
@@ -23,7 +23,7 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
         </span>
       </div>
 
-      <div className="h-16 w-16 rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,0.22),rgba(255,255,255,0.04))] p-2">
+      <div className="h-14 w-14 rounded-[18px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,0.22),rgba(255,255,255,0.04))] p-2 md:h-16 md:w-16 md:rounded-[22px]">
         <div className="flex h-full items-center justify-center rounded-[18px] bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.35),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95))]">
           <div className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-400/15" />
         </div>
@@ -31,7 +31,7 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-white md:text-base">{product.name}</h3>
+          <h3 className="text-sm font-semibold text-white">{product.name}</h3>
           <span className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-200">
             {product.retailer}
           </span>
@@ -64,7 +64,7 @@ export default function ProductRow({ product, index, onOpen, onToggleFavourite }
 
       <button
         onClick={() => onOpen(product)}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/12 px-4 py-3 text-sm font-medium text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20"
+        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-medium text-violet-100 transition hover:-translate-y-0.5 hover:bg-violet-500/20 md:py-3"
       >
         <span>Open page</span>
         <ExternalLink className="h-4 w-4" />

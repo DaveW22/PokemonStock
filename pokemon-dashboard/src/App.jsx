@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, PackageSearch } from 'lucide-react'
+import { Activity, Menu, PackageSearch, X } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Hero from './components/Hero'
 import RightPanel from './components/RightPanel'
@@ -39,9 +39,13 @@ export default function App() {
     error,
     refresh,
     runManualCheck: invokeManualCheck,
+    addProduct,
+    addingProduct,
+    addProductMessage,
   } = useProductStatuses()
   const [favourites, setFavourites] = useState({})
   const [checkInterval, setCheckInterval] = useState('Every 3 minutes')
+  const [menuOpen, setMenuOpen] = useState(false)
   const [webPushSupported] = useState(() => supportsWebPush())
   const [webPushEnabled, setWebPushEnabled] = useState(false)
   const [webPushBusy, setWebPushBusy] = useState(false)
@@ -96,6 +100,13 @@ export default function App() {
   function updateCheckInterval(value) {
     console.log('[Pokemon Stock Watcher] updateCheckInterval()', value)
     setCheckInterval(value)
+  }
+
+  async function handleAddProduct(payload) {
+    const result = await addProduct(payload)
+    if (!result.error) {
+      setMenuOpen(false)
+    }
   }
 
   const summary = useMemo(() => {
@@ -178,13 +189,45 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent p-4 text-white lg:p-6">
-      <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[36px] border border-white/8 p-4 shadow-[0_30px_80px_rgba(0,0,0,0.45)] lg:p-6">
-        <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)_330px]">
-          <Sidebar lastCheck={lastCheck} nextCheck={nextCheck} />
+    <div className="min-h-screen bg-transparent p-2 text-white md:p-4 lg:p-6">
+      <div className="dashboard-shell mx-auto max-w-[1800px] rounded-[28px] border border-white/8 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-4 lg:rounded-[36px] lg:p-6">
+        <header className="mb-4 rounded-2xl border border-white/8 bg-white/5 p-3 xl:hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-base font-semibold text-white">Pokemon Stock Watcher</p>
+              <p className="text-xs text-slate-400">Last check: {lastCheck}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((value) => !value)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200"
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          </div>
+          {menuOpen ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              {['Dashboard', 'Watchlist', 'History', 'Settings', 'About'].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-slate-200"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </header>
+
+        <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_330px] xl:gap-6">
+          <div className="hidden xl:block">
+            <Sidebar lastCheck={lastCheck} nextCheck={nextCheck} />
+          </div>
 
           <main className="min-w-0">
-            <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_260px_260px]">
+            <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px_260px] 2xl:gap-5">
               <div className="2xl:col-span-1">
                 <Hero />
               </div>
@@ -243,6 +286,9 @@ export default function App() {
               onUpdateCheckInterval={updateCheckInterval}
               summary={summary}
               statusNote={statusNote}
+              onAddProduct={handleAddProduct}
+              addingProduct={addingProduct}
+              addProductMessage={addProductMessage}
               webPushSupported={webPushSupported}
               webPushEnabled={webPushEnabled}
               webPushBusy={webPushBusy}
