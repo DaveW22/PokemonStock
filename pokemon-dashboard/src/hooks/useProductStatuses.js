@@ -58,6 +58,7 @@ function normalizeProducts(products, statusRows) {
         rank: index + 1,
         name: product.name,
         price: product.price,
+        imageUrl: product.image_url ?? null,
         retailer: product.retailer,
         priority: product.priority,
         url: product.url,
@@ -91,7 +92,10 @@ export function useProductStatuses() {
 
     const [{ data: productRows, error: productError }, { data: statusRows, error: statusError }] =
       await Promise.all([
-        supabase.from('products').select('id, name, retailer, url, price, priority, is_active').eq('is_active', true),
+        supabase
+          .from('products')
+          .select('id, name, retailer, url, price, image_url, priority, is_active')
+          .eq('is_active', true),
         supabase.from('product_status').select('product_id, status, last_checked_at'),
       ])
 
@@ -192,6 +196,7 @@ export function useProductStatuses() {
         const derivedName = normalizedName || verifiedData?.title || 'New Product'
         const derivedRetailer = normalizedRetailer || verifiedData?.retailer || 'Unknown retailer'
         const derivedPrice = normalizedPrice || verifiedData?.price || null
+        const derivedImageUrl = verifiedData?.image || null
 
         const { data, error: insertError } = await supabase
           .from('products')
@@ -200,6 +205,7 @@ export function useProductStatuses() {
             retailer: derivedRetailer,
             url: verifiedData?.url || normalizedUrl,
             price: derivedPrice,
+            image_url: derivedImageUrl,
             priority: ['High', 'Medium', 'Low'].includes(normalizedPriority) ? normalizedPriority : 'Medium',
             is_active: true,
           })
@@ -247,6 +253,7 @@ export function useProductStatuses() {
         .update({
           url: verifiedData?.url || normalizedUrl,
           price: verifiedData?.price || undefined,
+          image_url: verifiedData?.image || undefined,
         })
         .eq('id', productId)
         .select('id, name, retailer, url')

@@ -20,6 +20,7 @@ type VerifyResult = {
   retailer: string
   title: string | null
   price: string | null
+  image: string | null
   reason: string
   signals: string[]
 }
@@ -59,6 +60,14 @@ function extractPrice(html: string) {
 
   const textPriceMatch = html.match(/(?:£|\$|€)\s?\d{1,4}(?:[.,]\d{2})?/)
   return textPriceMatch?.[0] ?? null
+}
+
+function extractImage(html: string) {
+  return (
+    extractMeta(html, 'og:image') ??
+    extractMeta(html, 'twitter:image') ??
+    extractMeta(html, 'twitter:image:src')
+  )
 }
 
 function extractRetailer(url: URL) {
@@ -124,6 +133,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
       retailer: '',
       title: null,
       price: null,
+      image: null,
       reason: 'Invalid URL format. Include full URL starting with https://',
       signals: [],
     }
@@ -138,6 +148,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
       retailer: extractRetailer(parsedUrl),
       title: null,
       price: null,
+      image: null,
       reason: 'Only HTTP/HTTPS URLs are supported.',
       signals: [],
     }
@@ -160,6 +171,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
         retailer: extractRetailer(parsedUrl),
         title: null,
         price: null,
+        image: null,
         reason: `Could not load page (HTTP ${response.status}).`,
         signals: [],
       }
@@ -181,6 +193,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
         retailer: extractRetailer(parsedUrl),
         title: fallbackTitleFromUrl(parsedUrl),
         price: null,
+        image: null,
         reason: inferredProduct
           ? 'Retailer bot protection blocked content; inferred product page from URL pattern.'
           : 'Retailer bot protection blocked content and URL pattern is inconclusive.',
@@ -190,6 +203,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
 
     const title = extractTitle(html)
     const price = extractPrice(html)
+    const image = extractImage(html)
     const signals = calculateSignals(html, title)
     const confidence = confidenceFromSignals(signals)
     const inferredProduct = looksLikeProductUrl(parsedUrl)
@@ -203,6 +217,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
       retailer: extractRetailer(parsedUrl),
       title: title || fallbackTitleFromUrl(parsedUrl),
       price,
+      image,
       reason: isProduct
         ? 'Soft URL check passed.'
         : 'Soft URL check could not confidently confirm this is a product page.',
@@ -217,6 +232,7 @@ async function verifyUrl(inputUrl: string): Promise<VerifyResult> {
       retailer: extractRetailer(parsedUrl),
       title: null,
       price: null,
+      image: null,
       reason: error instanceof Error ? error.message : 'Unexpected URL check error.',
       signals: [],
     }

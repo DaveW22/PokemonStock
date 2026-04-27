@@ -61,9 +61,18 @@ export default function ProductRow({
 
       {isCompact ? null : (
         <div className="h-14 w-14 rounded-[18px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,0.22),rgba(255,255,255,0.04))] p-2 md:h-16 md:w-16 md:rounded-[22px]">
-          <div className="flex h-full items-center justify-center rounded-[18px] bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.35),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95))]">
-            <div className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-400/15" />
-          </div>
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full rounded-[18px] object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-[18px] bg-[radial-gradient(circle_at_top,_rgba(192,132,252,0.35),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95))]">
+              <div className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-400/15" />
+            </div>
+          )}
         </div>
       )}
 
