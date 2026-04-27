@@ -1,4 +1,4 @@
-import { Bell, Heart, LayoutDashboard, Search, Settings } from 'lucide-react'
+import { Bell, Github, Heart, LayoutDashboard, Search, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const navItems = [
